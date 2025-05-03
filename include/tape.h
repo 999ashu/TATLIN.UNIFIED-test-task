@@ -4,6 +4,8 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <thread>
 
 
 template <std::integral T>
@@ -13,6 +15,7 @@ class Tape {
     std::size_t fileSize{};
     uint32_t slice{};
     uint32_t idx{};
+    uint32_t latRW = 0, latMove = 0, latShift = 0;
     const uint32_t bufferSize;
     bool modified = false;
 
@@ -53,11 +56,22 @@ class Tape {
 public:
     Tape() = delete;
 
-    Tape(const std::filesystem::path& path, const char* mode, const std::size_t size = 1 << 7)
+    Tape(const std::filesystem::path& path, const char* mode, const std::filesystem::path& config = "",
+         const std::size_t size = 1 << 7)
         : buffer(new T[size]), bufferSize(size) {
+        if (!config.empty()) {
+            if (std::ifstream configFile(config); configFile.is_open()) {
+                configFile >> latRW >> latMove >> latShift;
+                configFile.close();
+            } else {
+                throw std::runtime_error(
+                    "Can't open: " + std::string(config.c_str()) + ", " + strerror(errno));
+            }
+        }
+
         file = fopen(path.c_str(), mode);
         if (!file) {
-            throw std::runtime_error("Can't open: " + std::string(path.c_str()) + strerror(errno));
+            throw std::runtime_error("Can't open: " + std::string(path.c_str()) + ", " + strerror(errno));
         }
 
         fseek(file, 0, SEEK_END);
@@ -77,6 +91,7 @@ public:
     }
 
     T read() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(latRW));
         if (slice * bufferSize + idx >= fileSize) {
             throw std::runtime_error("End of tape reached");
         }
@@ -85,6 +100,7 @@ public:
     }
 
     void write(T value) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(latRW));
         buffer[idx] = value;
         modified = true;
         const uint32_t pos = slice * bufferSize + idx;
@@ -94,6 +110,7 @@ public:
     }
 
     void moveForward() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(latShift));
         ++idx;
         if (idx >= bufferSize) {
             flushBuffer();
@@ -106,6 +123,7 @@ public:
     }
 
     void moveBackward() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(latShift));
         if (idx == 0 && slice == 0) {
             throw std::runtime_error("Cannot move backwards beyond the beginning of the tape");
         }
@@ -120,6 +138,7 @@ public:
     }
 
     void move(const int32_t steps) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(latMove));
         flushBuffer();
 
         const uint32_t pos = slice * bufferSize + idx;

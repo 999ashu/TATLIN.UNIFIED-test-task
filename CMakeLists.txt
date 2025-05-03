@@ -9,5 +9,6 @@ set_target_properties(tape_sorter PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SO
 
 add_subdirectory(extern/googletest)
 add_executable(tests tests/tests.cpp)
+set_target_properties(tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/tests)
 target_link_libraries(tests gtest gtest_main)
 target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/include)

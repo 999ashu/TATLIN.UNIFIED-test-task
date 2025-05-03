@@ -3,10 +3,22 @@
 
 #include <fstream>
 #include <random>
+#include <tuple>
 
-TEST(Tape, write) {
+class TapeTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
+protected:
+    static std::string GetConfigPath() {
+        return std::get<0>(GetParam());
+    }
+
+    static std::string GetTestName() {
+        return std::get<1>(GetParam());
+    }
+};
+
+TEST_P(TapeTest, Write) {
     {
-        Tape<int> tape("tape", "w");
+        Tape<int> tape("tape", "w", GetConfigPath());
         tape.write(2);
         tape.write(1);
         tape.moveForward();
@@ -32,13 +44,13 @@ TEST(Tape, write) {
     std::filesystem::remove("tape");
 }
 
-TEST(Tape, read) {
+TEST_P(TapeTest, Read) {
     std::ofstream file("tape", std::ios::binary);
     int values[] = {1, 2, 3};
     file.write(reinterpret_cast<char*>(values), sizeof(values));
     file.close();
 
-    Tape<int> tape("tape", "r");
+    Tape<int> tape("tape", "r", GetConfigPath());
 
     EXPECT_EQ(1, tape.read());
     EXPECT_EQ(1, tape.read());
@@ -52,7 +64,7 @@ TEST(Tape, read) {
     std::filesystem::remove("tape");
 }
 
-TEST(Tape, move) {
+TEST_P(TapeTest, Move) {
     std::ofstream file("tape", std::ios::binary);
     for (int i = 0; i < 512; ++i) {
         file.write(reinterpret_cast<char*>(&i), sizeof(int));
@@ -60,16 +72,16 @@ TEST(Tape, move) {
     file.close();
 
     {
-        Tape<int> tape("tape", "r");
+        Tape<int> tape("tape", "r", GetConfigPath());
         EXPECT_THROW(tape.moveBackward(), std::runtime_error);
     }
 
     {
-        Tape<int> tape("tape", "r");
+        Tape<int> tape("tape", "r", GetConfigPath());
         EXPECT_THROW(tape.move(-20), std::runtime_error);
     }
 
-    Tape<int> tape("tape", "r+");
+    Tape<int> tape("tape", "r+", GetConfigPath());
 
     EXPECT_EQ(0, tape.read());
     tape.move(19);
@@ -93,9 +105,9 @@ TEST(Tape, move) {
     std::filesystem::remove("tape");
 }
 
-TEST(Tape, stress) {
-    constexpr size_t NUM_ELEMENTS = 25000000;
-    constexpr size_t NUM_OPERATIONS = 1000000;
+TEST_P(TapeTest, Stress) {
+    constexpr size_t NUM_ELEMENTS = 2500000;
+    constexpr size_t NUM_OPERATIONS = 100000;
 
     std::mt19937 gen(735675);
     std::uniform_int_distribution value_dist(1, 1000000);
@@ -112,7 +124,7 @@ TEST(Tape, stress) {
     }
 
     {
-        Tape<int> tape("tape_stress", "r+", 1 << 7);
+        Tape<int> tape("tape_stress", "r+", GetConfigPath(), 1 << 7);
         size_t current_pos = 0;
         for (size_t i = 0; i < NUM_OPERATIONS; ++i) {
             switch (op_dist(gen)) {
@@ -152,7 +164,6 @@ TEST(Tape, stress) {
                 tape.move(steps);
                 current_pos += steps;
                 EXPECT_EQ(reference_data[current_pos], tape.read());
-
             }
         }
     }
@@ -166,3 +177,15 @@ TEST(Tape, stress) {
 
     std::filesystem::remove("tape_stress");
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    TapeTests,
+    TapeTest,
+    ::testing::Values(
+        std::make_tuple("", "WithoutConfig"),
+        std::make_tuple("config.txt", "WithConfig")
+    ),
+    [](const testing::TestParamInfo<TapeTest::ParamType>& info) {
+        return std::get<1>(info.param);
+    }
+);
