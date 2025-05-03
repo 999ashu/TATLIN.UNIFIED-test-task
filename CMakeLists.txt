@@ -3,8 +3,9 @@ project(TATLIN-UNIFIED-test-task)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(tape_sorter src/tape_sorter.cpp)
+add_executable(tape_sorter src/main.cpp src/tape_sorter.cpp)
 target_include_directories(tape_sorter PRIVATE ${CMAKE_SOURCE_DIR}/include)
+set_target_properties(tape_sorter PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/tests)
 
 add_subdirectory(extern/googletest)
 add_executable(tests tests/tests.cpp)

@@ -1,6 +1,2 @@
-#include <tape.h>
-#include <iostream>
+#include<tape_sorter.h>
 
-int main() {
-    std::cout << "template";
-}
