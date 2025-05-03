@@ -91,16 +91,15 @@ public:
     }
 
     T read() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(latRW));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(latRW));
         if (slice * bufferSize + idx >= fileSize) {
             throw std::runtime_error("End of tape reached");
         }
-
         return buffer[idx];
     }
 
     void write(T value) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(latRW));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(latRW));
         buffer[idx] = value;
         modified = true;
         const uint32_t pos = slice * bufferSize + idx;
@@ -110,20 +109,18 @@ public:
     }
 
     void moveForward() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(latShift));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(latShift));
         ++idx;
         if (idx >= bufferSize) {
             flushBuffer();
             ++slice;
             idx = 0;
-            if (slice * bufferSize >= fileSize)
-                throw std::runtime_error("Cannot move forward beyond the end of the tape");
             loadSlice();
         }
     }
 
     void moveBackward() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(latShift));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(latShift));
         if (idx == 0 && slice == 0) {
             throw std::runtime_error("Cannot move backwards beyond the beginning of the tape");
         }
@@ -138,7 +135,7 @@ public:
     }
 
     void move(const int32_t steps) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(latMove));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(latMove));
         flushBuffer();
 
         const uint32_t pos = slice * bufferSize + idx;
