@@ -2,6 +2,7 @@
 #include <tape.h>
 
 #include <fstream>
+#include <random>
 
 TEST(Tape, write) {
     {
@@ -27,6 +28,8 @@ TEST(Tape, write) {
     EXPECT_EQ(3, value);
 
     file.close();
+
+    std::filesystem::remove("tape");
 }
 
 TEST(Tape, read) {
@@ -45,6 +48,8 @@ TEST(Tape, read) {
     EXPECT_EQ(3, tape.read());
     tape.moveForward();
     EXPECT_THROW(tape.read(), std::runtime_error);
+
+    std::filesystem::remove("tape");
 }
 
 TEST(Tape, move) {
@@ -84,4 +89,80 @@ TEST(Tape, move) {
     EXPECT_EQ(1337, tape.read());
 
     EXPECT_THROW(tape.move(2000), std::runtime_error);
+
+    std::filesystem::remove("tape");
+}
+
+TEST(Tape, stress) {
+    constexpr size_t NUM_ELEMENTS = 25000000;
+    constexpr size_t NUM_OPERATIONS = 1000000;
+
+    std::mt19937 gen(735675);
+    std::uniform_int_distribution value_dist(1, 1000000);
+    std::uniform_int_distribution op_dist(0, 3);
+    std::uniform_int_distribution move_dist(-100, 100);
+
+    std::vector<int> reference_data(NUM_ELEMENTS);
+    for (auto& val : reference_data)
+        val = value_dist(gen);
+
+    {
+        std::ofstream file("tape_stress", std::ios::binary);
+        file.write(reinterpret_cast<char*>(reference_data.data()), reference_data.size() * sizeof(int));
+    }
+
+    {
+        Tape<int> tape("tape_stress", "r+", 1 << 7);
+        size_t current_pos = 0;
+        for (size_t i = 0; i < NUM_OPERATIONS; ++i) {
+            switch (op_dist(gen)) {
+                case 1: {
+                    int new_value = value_dist(gen);
+                    tape.write(new_value);
+                    reference_data[current_pos] = new_value;
+                    break;
+                }
+                case 2: {
+                    if (current_pos < NUM_ELEMENTS - 1) {
+                        tape.moveForward();
+                        ++current_pos;
+                    }
+                    break;
+                }
+                case 3: {
+                    if (current_pos > 0) {
+                        tape.moveBackward();
+                        --current_pos;
+                    }
+                    break;
+                }
+                default: {
+                    EXPECT_EQ(reference_data[current_pos], tape.read());
+                }
+            }
+
+            if (i > 0 && i % 100 == 0) {
+                int steps = move_dist(gen);
+                if (steps < 0 && static_cast<size_t>(std::abs(steps)) > current_pos) {
+                    steps = -static_cast<int>(current_pos);
+                }
+                if (steps > 0 && current_pos + steps >= NUM_ELEMENTS) {
+                    steps = NUM_ELEMENTS - current_pos - 1;
+                }
+                tape.move(steps);
+                current_pos += steps;
+                EXPECT_EQ(reference_data[current_pos], tape.read());
+
+            }
+        }
+    }
+
+    {
+        std::ifstream file("tape_stress", std::ios::binary);
+        std::vector<int> read_data(NUM_ELEMENTS);
+        file.read(reinterpret_cast<char*>(read_data.data()), NUM_ELEMENTS * sizeof(int));
+        EXPECT_EQ(reference_data, read_data);
+    }
+
+    std::filesystem::remove("tape_stress");
 }
