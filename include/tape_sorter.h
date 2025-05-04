@@ -17,14 +17,14 @@ constexpr std::size_t MAX_TMP = 8;
 constexpr std::size_t СHUNK_SIZE = 2 * 1024 * 1024;
 
 template <std::integral T>
-void merge_tapes(const std::vector<fs::path>& tapes, const std::string& out_path, const std::string& cfg) {
+void merge_tapes(const std::vector<fs::path>& tapes, const std::string& outPath, const std::string& cfg) {
     if (tapes.empty()) {
         return;
     }
 
     if (tapes.size() == 1) {
         std::error_code ec;
-        fs::copy_file(tapes[0], out_path, fs::copy_options::overwrite_existing, ec);
+        fs::copy_file(tapes[0], outPath, fs::copy_options::overwrite_existing, ec);
         if (ec) {
             throw std::runtime_error("Copy failed: " + ec.message());
         }
@@ -48,7 +48,7 @@ void merge_tapes(const std::vector<fs::path>& tapes, const std::string& out_path
         } catch (const std::runtime_error& ignored) {}
     }
 
-    Tape<T> out{out_path, "w", cfg};
+    Tape<T> out{outPath, "w", cfg};
     bool first = true;
     while (!queue.empty()) {
         auto [value, index] = queue.top();
@@ -66,7 +66,7 @@ void merge_tapes(const std::vector<fs::path>& tapes, const std::string& out_path
 }
 
 template <std::integral T>
-std::pair<std::vector<fs::path>, std::size_t> partial_sort(const fs::path& in_path, const fs::path& tmpDir,
+std::pair<std::vector<fs::path>, std::size_t> partial_sort(const fs::path& inPath, const fs::path& tmpDir,
                                                            const fs::path& cfg) {
     const std::size_t elements = СHUNK_SIZE / sizeof(T);
     std::vector<fs::path> tapes;
@@ -81,7 +81,7 @@ std::pair<std::vector<fs::path>, std::size_t> partial_sort(const fs::path& in_pa
     std::size_t ringIdx = 0;
     std::size_t mergeIdx = 0;
 
-    Tape<T> in{in_path, "r", cfg};
+    Tape<T> in{inPath, "r", cfg};
     while (true) {
         if (tapes.size() >= MAX_TMP) {
             fs::path merged = tmpDir / ("merged_" + std::to_string(mergeIdx % 2) + ".bin");
@@ -125,13 +125,13 @@ std::pair<std::vector<fs::path>, std::size_t> partial_sort(const fs::path& in_pa
 } // namespace detail
 
 template <std::integral T>
-void sort(const std::string& in_path, const std::string& out_path, const std::string& cfg = "") {
+void sort(const std::string& inPath, const std::string& outPath, const std::string& cfg = "") {
     const fs::path tmpDir = "tmpDir";
 
     fs::create_directories(tmpDir);
-    auto [tapes, total] = detail::partial_sort<T>(in_path, tmpDir, cfg);
+    auto [tapes, total] = detail::partial_sort<T>(inPath, tmpDir, cfg);
     if (!tapes.empty()) {
-        detail::merge_tapes<T>(tapes, out_path, cfg);
+        detail::merge_tapes<T>(tapes, outPath, cfg);
     }
     fs::remove_all(tmpDir);
 }
