@@ -14,6 +14,6 @@
 ---
 ## Project setup
 ```
-git clone https://github.com/999ashu/TATLIN.UNIFIED-test-task.git
+git@github.com:999ashu/Tape-Sorter.git
 git submodule update --init --recursive
 ```
