@@ -108,7 +108,7 @@ public:
         }
     }
 
-    void moveForward() {
+    void move_forward() {
         std::this_thread::sleep_for(std::chrono::nanoseconds(latShift));
         ++idx;
         if (idx >= bufferSize) {
@@ -119,7 +119,7 @@ public:
         }
     }
 
-    void moveBackward() {
+    void move_backward() {
         std::this_thread::sleep_for(std::chrono::nanoseconds(latShift));
         if (idx == 0 && slice == 0) {
             throw std::runtime_error("Cannot move backwards beyond the beginning of the tape");
@@ -157,5 +157,9 @@ public:
         } else {
             idx = newIdx;
         }
+    }
+
+    std::size_t estimated_size() const {
+        return fileSize;
     }
 };

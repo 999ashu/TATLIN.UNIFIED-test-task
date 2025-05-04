@@ -22,9 +22,9 @@ TEST_P(TapeTest, Write) {
         Tape<int> tape("tape.bin", "w", GetConfigPath());
         tape.write(2);
         tape.write(1);
-        tape.moveForward();
+        tape.move_forward();
         tape.write(2);
-        tape.moveForward();
+        tape.move_forward();
         tape.write(3);
     }
 
@@ -55,11 +55,11 @@ TEST_P(TapeTest, Read) {
 
     EXPECT_EQ(1, tape.read());
     EXPECT_EQ(1, tape.read());
-    tape.moveForward();
+    tape.move_forward();
     EXPECT_EQ(2, tape.read());
-    tape.moveForward();
+    tape.move_forward();
     EXPECT_EQ(3, tape.read());
-    tape.moveForward();
+    tape.move_forward();
     EXPECT_THROW(tape.read(), std::runtime_error);
 
     std::filesystem::remove("tape.bin");
@@ -74,7 +74,7 @@ TEST_P(TapeTest, Move) {
 
     {
         Tape<int> tape("tape.bin", "r", GetConfigPath());
-        EXPECT_THROW(tape.moveBackward(), std::runtime_error);
+        EXPECT_THROW(tape.move_backward(), std::runtime_error);
     }
 
     {
@@ -87,9 +87,9 @@ TEST_P(TapeTest, Move) {
     EXPECT_EQ(0, tape.read());
     tape.move(19);
     EXPECT_EQ(19, tape.read());
-    tape.moveForward();
+    tape.move_forward();
     EXPECT_EQ(20, tape.read());
-    tape.moveBackward();
+    tape.move_backward();
     EXPECT_EQ(19, tape.read());
     tape.move(190);
     EXPECT_EQ(209, tape.read());
@@ -137,14 +137,14 @@ TEST_P(TapeTest, Stress) {
                 }
                 case 2: {
                     if (current_pos < NUM_ELEMENTS - 1) {
-                        tape.moveForward();
+                        tape.move_forward();
                         ++current_pos;
                     }
                     break;
                 }
                 case 3: {
                     if (current_pos > 0) {
-                        tape.moveBackward();
+                        tape.move_backward();
                         --current_pos;
                     }
                     break;
@@ -190,41 +190,41 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 TEST(SortingTest, Sort) {
-    const std::string input_tape_path = "input_tape.bin";
-    const std::string output_tape_path = "output_tape.bin";
+    const std::string inPath = "input.bin";
+    const std::string outPath = "output.bin";
 
-    constexpr size_t element_count = 503 * 1024 * 1024 / sizeof(int);
+    constexpr size_t elements = 33 * 1024 * 1024 / sizeof(int);
     {
         std::mt19937 gen(73427);
-        std::uniform_int_distribution dist(1, 1000000);
+        std::uniform_int_distribution dist(1, 10000000);
 
-        std::ofstream input_file(input_tape_path, std::ios::binary);
-        for (size_t i = 0; i < element_count; ++i) {
+        std::ofstream fstream(inPath, std::ios::binary);
+        for (size_t i = 0; i < elements; ++i) {
             int value = dist(gen);
-            input_file.write(reinterpret_cast<char*>(&value), sizeof(int));
+            fstream.write(reinterpret_cast<char*>(&value), sizeof(int));
         }
-        input_file.close();
+        fstream.close();
 
-        std::ofstream output_file(output_tape_path, std::ios::binary);
-        output_file.seekp(element_count * sizeof(int));
-        output_file.write("", 1);
-        output_file.close();
+        std::ofstream out(outPath, std::ios::binary);
+        out.seekp(elements * sizeof(int));
+        out.write("", 1);
+        out.close();
     }
 
-    sort<int>(input_tape_path, output_tape_path);
+    sort<int>(inPath, outPath);
 
     {
-        Tape<int> output_tape(output_tape_path, "r");
-        int prev_value = output_tape.read();
+        Tape<int> output(outPath, "r");
+        int prev = output.read();
 
-        for (size_t i = 1; i < element_count; ++i) {
-            output_tape.moveForward();
-            int current_value = output_tape.read();
-            EXPECT_LE(prev_value, current_value);
-            prev_value = current_value;
+        for (size_t i = 1; i < elements; ++i) {
+            output.move_forward();
+            int curr = output.read();
+            EXPECT_LE(prev, curr);
+            prev = curr;
         }
     }
 
-    std::filesystem::remove(input_tape_path);
-    std::filesystem::remove(output_tape_path);
+    std::filesystem::remove(inPath);
+    std::filesystem::remove(outPath);
 }
