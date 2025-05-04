@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(TATLIN-UNIFIED-test-task)
+project(Tape)
 
 set(CMAKE_CXX_STANDARD 20)
 
